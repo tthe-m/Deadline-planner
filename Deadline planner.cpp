@@ -35,6 +35,11 @@ int main() {
 	date.tm_mon=month-1;
 	date.tm_year=year-1900;
 	time_t time = mktime(&date);
+
+	if (time == -1 || date.tm_mday!=day||date.tm_mon!=month-1||date.tm_year!=year-1900){
+		cout << "Error: Such date does not exist." << endl;
+	}
+
 	while (workdays > 0) {
 		date.tm_mday++;
 		mktime(&date);
