@@ -15,6 +15,11 @@ int main() {
 	cout << "Input workday amount: ";
 	cin >> workdays;
 
+	if (workdays < 0) {
+		cout << "Error: Workday amount cannot be negative.";
+		return 1;
+	}
+
 	int day, month, year;
 	char dot1, dot2;
 
