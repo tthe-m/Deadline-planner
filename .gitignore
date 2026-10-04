@@ -361,3 +361,17 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Результати збирання
+x64/
+Debug/
+Release/
+*.exe
+*.obj
+*.pdb
+# Службові файли середовища розробки
+.vs/
+*.user
+# Тимчасові й особисті файли
+*.log
+*.tmp
