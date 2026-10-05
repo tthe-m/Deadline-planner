@@ -69,8 +69,8 @@ int main() {
 				//створення дати
 				tm date = {};
 				date.tm_mday = day;
-				date.tm_mon = month;
-				date.tm_year = year;
+				date.tm_mon = month - 1;
+				date.tm_year = year - 1900;
 
 				mktime(&date);
 
