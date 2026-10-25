@@ -2,6 +2,7 @@
 #include <iomanip>
 #include <sstream>
 #include <ctime>
+#include <Windows.h>
 
 using namespace std;
 
@@ -29,25 +30,22 @@ bool isweekday(const tm& date) {
 
 int main() {
 
-	//setlocale(LC_ALL,"Ukrainian";
-	//чомусь воно не хоче показувати українській текст??тож вся програма на англійській
-
-	//upd.:щось не здогадався я одразу просто загуглити як правильно написати локалізацію правильно,
-	//але мені лінь переписувати увесь текст назад на українську
+	SetConsoleCP(1251);
+	SetConsoleOutputCP(1251);
 
 	char repeat;
 
 	do {
 		string inputdate;
 		int workday;
-		cout << "Input date (dd.mm.yyyy): ";
+		cout << "Впишіть дату (ДД.ММ.РРРР): ";
 		cin >> inputdate;
-		cout << "Input workday amount: ";
+		cout << "Впишіть кількість робочх днів: ";
 		cin >> workday;
 
 		//перевірка кількості робочих днів
-		if (cin.fail() || workday < 0) {
-			cout << "Error: Workday amount must be above zero.";
+		if (cin.fail()) {
+			cout << "Помилка: невірна кількість робочих днів.";
 			return 1;
 		}
 		else {
@@ -59,11 +57,11 @@ int main() {
 			stringstream ss(inputdate);
 
 			if (!(ss >> day >> dot1 >> month >> dot2 >> year) || dot1 != '.' || dot2 != '.' || !ss.eof()) {
-				cout << "Error: incorrect date format.";
+				cout << "Помилка: невірни формат дати.";
 			}
 			//перевірка дати
 			else if (!isvaliddate(day, month, year)) {
-				cout << "Such date does not exist.";
+				cout << "Такої дати не існує.";
 			}
 			else {
 				//створення дати
@@ -75,18 +73,19 @@ int main() {
 				mktime(&date);
 
 				//додавання робочих днів
-				int daysadded = 0;
+				int daysprocessed = 0;
+				int direction = (workday >= 0) ? 1 : -1;
 
-				while (daysadded < workday) {
-					date.tm_mday++;
+				while (daysprocessed < abs(workday)) {
+					date.tm_mday += direction;
 					mktime(&date);
 
 					if (isweekday(date)) {
-						daysadded++;
+						daysprocessed++;
 					}
 				}
 				//виведення результату
-				cout << "Result: "
+				cout << "Результат: "
 					<< setfill('0') << setw(2) << date.tm_mday << "."
 					<< setw(2) << date.tm_mon + 1 << "."
 					<< setw(4) << date.tm_year + 1900
@@ -94,13 +93,13 @@ int main() {
 			}
 		}
 		//запит на повторення
-		cout << "Repeat the program?(y/n): ";
+		cout << "Повторити програму?(y/n): ";
 		cin >>repeat;
 
 		while (repeat != 'y' && repeat != 'Y' &&
 			repeat != 'n' && repeat != 'N')
 		{
-			cout << "Error: input N or Y";
+			cout << "Помилка: впишіть N або Y";
 			cin >> repeat;
 		}
 	} while (repeat == 'y' || repeat == 'Y');
