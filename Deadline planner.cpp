@@ -2,7 +2,9 @@
 #include <iomanip>
 #include <sstream>
 #include <ctime>
-#include <Windows.h>
+#include <fstream>
+#include <set>
+#include <windows.h>
 
 using namespace std;
 
@@ -22,10 +24,57 @@ bool isvaliddate(int day, int month, int year) {
 		date.tm_mon == month - 1 &&
 		date.tm_year == year - 1900;
 }
+
+int dateKey(const tm& date) {
+	return(date.tm_year + 1900) * 10000 + (date.tm_mon + 1) * 100 + date.tm_mday;
+}
+
 //перевірка, чи є день робочим
 bool isweekday(const tm& date) {
 	//0 - неділя 6 - субота
 	return date.tm_mday != 0 && date.tm_wday != 6;
+}
+
+bool loadHolidays(const string& filename, set<int>& holidays) {
+	ifstream file(filename);
+
+	if (!file.is_open())
+		return false;
+
+	string line;
+
+	while (getline(file, line)) {
+			
+		if (line.empty())
+			continue;
+
+		int day, month, year;
+		char dot1, dot2;
+		stringstream ss(line);
+		if (!(ss >> day >> dot1 >> month >> dot2 >> year))
+			continue;
+			
+		if (dot1 != '.' || dot2 != '.' || !ss.eof())
+			continue;
+
+		if (!isvaliddate(day, month, year));
+			continue;
+
+			tm holiday = {};
+			holiday.tm_mday = day;
+			holiday.tm_mon = month - 1;
+			holiday.tm_year = year - 1900;
+
+			mktime(&holiday);
+
+			holidays.insert(dateKey(holiday));
+	}
+	return true;
+}
+
+bool isWorkingDay(const tm& date, const set<int>& holidays) {
+	return isweekday(date) &&
+		holidays.find(dateKey(date)) == holidays.end();
 }
 
 int main() {
@@ -34,6 +83,13 @@ int main() {
 	SetConsoleOutputCP(1251);
 
 	char repeat;
+
+	set<int> holidays;
+
+	if (!loadHolidays("holidays.txt", holidays)) {
+		cout << "Помилка: не виходить відкрити holidays.txt" << endl;
+		return 1;
+	}
 
 	do {
 		string inputdate;
@@ -57,7 +113,7 @@ int main() {
 			stringstream ss(inputdate);
 
 			if (!(ss >> day >> dot1 >> month >> dot2 >> year) || dot1 != '.' || dot2 != '.' || !ss.eof()) {
-				cout << "Помилка: невірни формат дати.";
+				cout << "Помилка: некорректний формат дати.";
 			}
 			//перевірка дати
 			else if (!isvaliddate(day, month, year)) {
@@ -82,6 +138,8 @@ int main() {
 
 					if (isweekday(date)) {
 						daysprocessed++;
+					if (isWorkingDay(date, holidays)) {
+						daysadded++;
 					}
 				}
 				//виведення результату
@@ -99,7 +157,7 @@ int main() {
 		while (repeat != 'y' && repeat != 'Y' &&
 			repeat != 'n' && repeat != 'N')
 		{
-			cout << "Помилка: впишіть N або Y";
+			cout << "Помилка: впишіть Y або N";
 			cin >> repeat;
 		}
 	} while (repeat == 'y' || repeat == 'Y');
