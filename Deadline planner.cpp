@@ -1,166 +1,185 @@
 #include <iostream>
 #include <iomanip>
 #include <sstream>
-#include <ctime>
 #include <fstream>
 #include <set>
-#include <windows.h>
+#include <string>
+#include <limits>
+#include <cstdlib>
+#include <ctime>
+#include <locale>
 
 using namespace std;
 
-//перевірка, чи є дата коректною
-bool isvaliddate(int day, int month, int year) {
-	if (year < 1 || month < 1 || month>12 || day < 1)
-		return false;
+// перевірка, чи є дата коректною
+bool isValidDate(int day, int month, int year) {
+    if (year < 1 || month < 1 || month > 12 || day < 1) {
+        return false;
+    }
 
-	tm date = {};
-	date.tm_mday = day;
-	date.tm_mon = month - 1;
-	date.tm_year = year - 1900;
+    tm date = {};
+    date.tm_mday = day;
+    date.tm_mon = month - 1;
+    date.tm_year = year - 1900;
+    date.tm_isdst = -1;
 
-	mktime(&date);
+    if (mktime(&date) == -1) {
+        return false;
+    }
 
-	return date.tm_mday == day &&
-		date.tm_mon == month - 1 &&
-		date.tm_year == year - 1900;
+    return date.tm_mday == day &&
+        date.tm_mon == month - 1 &&
+        date.tm_year == year - 1900;
 }
 
+// розбір рядка формату ДД.ММ.РРРР та перевірка коректності дати
+bool parseDate(const string& text, int& day, int& month, int& year) {
+    char dot1 = '\0', dot2 = '\0';
+    stringstream ss(text);
+
+    if (!(ss >> day >> dot1 >> month >> dot2 >> year)) {
+        return false;
+    }
+
+    if (dot1 != '.' || dot2 != '.' || !(ss >> ws).eof()) {
+        return false;
+    }
+
+    return isValidDate(day, month, year);
+}
+
+// перетворення дати у числовий ключ РРРРММДД для швидкого пошуку
 int dateKey(const tm& date) {
-	return(date.tm_year + 1900) * 10000 + (date.tm_mon + 1) * 100 + date.tm_mday;
+    return (date.tm_year + 1900) * 10000 + (date.tm_mon + 1) * 100 + date.tm_mday;
 }
 
-//перевірка, чи є день робочим
-bool isweekday(const tm& date) {
-	//0 - неділя 6 - субота
-	return date.tm_mday != 0 && date.tm_wday != 6;
+// перевірка, чи є день буднім (пн–пт)
+bool isWeekday(const tm& date) {
+    // 0 - неділя, 6 - субота
+    return date.tm_wday != 0 && date.tm_wday != 6;
 }
 
+// завантаження святкових днів із файлу
 bool loadHolidays(const string& filename, set<int>& holidays) {
-	ifstream file(filename);
+    ifstream file(filename);
+    if (!file.is_open()) {
+        return false;
+    }
 
-	if (!file.is_open())
-		return false;
+    holidays.clear();
+    string line;
 
-	string line;
+    while (getline(file, line)) {
+        stringstream check(line);
+        string trimmed;
+        if (!(check >> trimmed)) {
+            continue;
+        }
 
-	while (getline(file, line)) {
-			
-		if (line.empty())
-			continue;
+        int day = 0, month = 0, year = 0;
+        if (!parseDate(line, day, month, year)) {
+            continue;
+        }
 
-		int day, month, year;
-		char dot1, dot2;
-		stringstream ss(line);
-		if (!(ss >> day >> dot1 >> month >> dot2 >> year))
-			continue;
-			
-		if (dot1 != '.' || dot2 != '.' || !ss.eof())
-			continue;
+        tm holiday = {};
+        holiday.tm_mday = day;
+        holiday.tm_mon = month - 1;
+        holiday.tm_year = year - 1900;
+        holiday.tm_isdst = -1;
 
-		if (!isvaliddate(day, month, year));
-			continue;
+        if (mktime(&holiday) != -1) {
+            holidays.insert(dateKey(holiday));
+        }
+    }
 
-			tm holiday = {};
-			holiday.tm_mday = day;
-			holiday.tm_mon = month - 1;
-			holiday.tm_year = year - 1900;
-
-			mktime(&holiday);
-
-			holidays.insert(dateKey(holiday));
-	}
-	return true;
+    return true;
 }
 
+// перевірка, чи є день робочим (будній день і не свято)
 bool isWorkingDay(const tm& date, const set<int>& holidays) {
-	return isweekday(date) &&
-		holidays.find(dateKey(date)) == holidays.end();
+    return isWeekday(date) && holidays.find(dateKey(date)) == holidays.end();
+}
+
+// очищення стану та буфера введення після помилки
+void clearCinBuffer() {
+    cin.clear();
+    cin.ignore((numeric_limits<streamsize>::max)(), '\n');
 }
 
 int main() {
+    try {
+        locale::global(locale("ukr"));
+    }
+    catch (const exception&) {
+        // ігноруємо, якщо локаль не вдалося застосувати
+    }
 
-	SetConsoleCP(1251);
-	SetConsoleOutputCP(1251);
+    set<int> holidays;
+    if (!loadHolidays("holidays.txt", holidays)) {
+        cout << "Помилка: не вдається відкрити holidays.txt" << endl;
+        return 1;
+    }
 
-	char repeat;
+    char repeat = 'n';
 
-	set<int> holidays;
+    do {
+        string inputDate;
+        int workday = 0;
 
-	if (!loadHolidays("holidays.txt", holidays)) {
-		cout << "Помилка: не виходить відкрити holidays.txt" << endl;
-		return 1;
-	}
+        cout << "Впишіть дату (ДД.ММ.РРРР): ";
+        cin >> inputDate;
 
-	do {
-		string inputdate;
-		int workday;
-		cout << "Впишіть дату (ДД.ММ.РРРР): ";
-		cin >> inputdate;
-		cout << "Впишіть кількість робочх днів: ";
-		cin >> workday;
+        cout << "Впишіть кількість робочих днів: ";
+        if (!(cin >> workday)) {
+            cout << "Помилка: невірна кількість робочих днів." << endl;
+            clearCinBuffer();
+        }
+        else {
+            int day = 0, month = 0, year = 0;
 
-		//перевірка кількості робочих днів
-		if (cin.fail()) {
-			cout << "Помилка: невірна кількість робочих днів.";
-			return 1;
-		}
-		else {
+            if (!parseDate(inputDate, day, month, year)) {
+                cout << "Помилка: некоректний формат або неіснуюча дата." << endl;
+            }
+            else {
+                tm date = {};
+                date.tm_mday = day;
+                date.tm_mon = month - 1;
+                date.tm_year = year - 1900;
+                date.tm_isdst = -1;
+                mktime(&date);
 
-			//розбір дати
-			int day, month, year;
-			char dot1, dot2;
+                int direction = (workday >= 0) ? 1 : -1;
+                int remaining = abs(workday);
 
-			stringstream ss(inputdate);
+                while (remaining > 0) {
+                    date.tm_mday += direction;
+                    date.tm_isdst = -1;
+                    mktime(&date);
 
-			if (!(ss >> day >> dot1 >> month >> dot2 >> year) || dot1 != '.' || dot2 != '.' || !ss.eof()) {
-				cout << "Помилка: некорректний формат дати.";
-			}
-			//перевірка дати
-			else if (!isvaliddate(day, month, year)) {
-				cout << "Такої дати не існує.";
-			}
-			else {
-				//створення дати
-				tm date = {};
-				date.tm_mday = day;
-				date.tm_mon = month - 1;
-				date.tm_year = year - 1900;
+                    if (isWorkingDay(date, holidays)) {
+                        remaining--;
+                    }
+                }
 
-				mktime(&date);
+                cout << "Результат: "
+                    << setfill('0') << setw(2) << date.tm_mday << "."
+                    << setw(2) << (date.tm_mon + 1) << "."
+                    << setw(4) << (date.tm_year + 1900)
+                    << endl;
+            }
+        }
 
-				//додавання робочих днів
-				int daysprocessed = 0;
-				int direction = (workday >= 0) ? 1 : -1;
+        do {
+            cout << "Повторити програму? (y/n): ";
+            cin >> repeat;
+            clearCinBuffer();
 
-				while (daysprocessed < abs(workday)) {
-					date.tm_mday += direction;
-					mktime(&date);
+            if (repeat != 'y' && repeat != 'Y' && repeat != 'n' && repeat != 'N') {
+                cout << "Помилка: впишіть y або n." << endl;
+            }
+        } while (repeat != 'y' && repeat != 'Y' && repeat != 'n' && repeat != 'N');
 
-					if (isweekday(date)) {
-						daysprocessed++;
-					if (isWorkingDay(date, holidays)) {
-						daysadded++;
-					}
-				}
-				//виведення результату
-				cout << "Результат: "
-					<< setfill('0') << setw(2) << date.tm_mday << "."
-					<< setw(2) << date.tm_mon + 1 << "."
-					<< setw(4) << date.tm_year + 1900
-					<< endl;
-			}
-		}
-		//запит на повторення
-		cout << "Повторити програму?(y/n): ";
-		cin >>repeat;
+    } while (repeat == 'y' || repeat == 'Y');
 
-		while (repeat != 'y' && repeat != 'Y' &&
-			repeat != 'n' && repeat != 'N')
-		{
-			cout << "Помилка: впишіть Y або N";
-			cin >> repeat;
-		}
-	} while (repeat == 'y' || repeat == 'Y');
-
-	return 0;
+    return 0;
 }
