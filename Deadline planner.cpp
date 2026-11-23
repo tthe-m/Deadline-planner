@@ -2,6 +2,7 @@
 #include <iomanip>
 #include <sstream>
 #include <ctime>
+#include <limits>
 #include <Windows.h>
 
 using namespace std;
@@ -28,6 +29,11 @@ bool isweekday(const tm& date) {
 	return date.tm_mday != 0 && date.tm_wday != 6;
 }
 
+void clearCinBuffer() {
+	cin.clear();
+	cin.ignore((numeric_limits<streamsize>::max)(), '\n');
+}
+
 int main() {
 
 	SetConsoleCP(1251);
@@ -44,9 +50,9 @@ int main() {
 		cin >> workday;
 
 		//перевірка кількості робочих днів
-		if (cin.fail()) {
+		if (!(cin>>workday)) {
 			cout << "Помилка: невірна кількість робочих днів.";
-			return 1;
+			clearCinBuffer();
 		}
 		else {
 
@@ -95,6 +101,7 @@ int main() {
 		//запит на повторення
 		cout << "Повторити програму?(y/n): ";
 		cin >>repeat;
+		clearCinBuffer();
 
 		while (repeat != 'y' && repeat != 'Y' &&
 			repeat != 'n' && repeat != 'N')
