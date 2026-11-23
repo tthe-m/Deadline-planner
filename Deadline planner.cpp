@@ -3,7 +3,7 @@
 #include <sstream>
 #include <ctime>
 #include <limits>
-#include <Windows.h>
+#include <locale>
 
 using namespace std;
 
@@ -37,8 +37,12 @@ void clearCinBuffer() {
 
 int main() {
 
-	SetConsoleCP(1251);
-	SetConsoleOutputCP(1251);
+	try {
+		locale::global(locale(""));
+	}
+	catch (const exception&) {
+		// ігноруємо, якщо локаль не вдалося застосувати
+	}
 
 	char repeat;
 
