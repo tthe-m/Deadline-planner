@@ -16,6 +16,7 @@ bool isvaliddate(int day, int month, int year) {
 	date.tm_mday = day;
 	date.tm_mon = month - 1;
 	date.tm_year = year - 1900;
+	date.tm_isdst = -1;
 
 	mktime(&date);
 
@@ -75,6 +76,7 @@ int main() {
 				date.tm_mday = day;
 				date.tm_mon = month - 1;
 				date.tm_year = year - 1900;
+				date.tm_isdst = -1;
 
 				mktime(&date);
 
@@ -84,6 +86,7 @@ int main() {
 
 				while (daysprocessed < abs(workday)) {
 					date.tm_mday += direction;
+					date.tm_isdst = -1;
 					mktime(&date);
 
 					if (isweekday(date)) {
